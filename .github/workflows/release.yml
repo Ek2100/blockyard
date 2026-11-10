@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag like v2.0.0 to build Blockyard for Mac, Windows and Linux and publish a GitHub release.
+# Push a tag like v2.0.0 (or publish a release with a new v2.0.0 tag on GitHub's website) to build Blockyard
+# for Mac, Windows and Linux and attach the downloads to that release.
 on:
   push:
     tags: ['v*']
@@ -88,4 +89,10 @@ jobs:
         run: |
           V="$(node -p "require('./package.json').version")"
           node scripts/release-notes.js "$V" > notes.md
-          gh release create "$GITHUB_REF_NAME" out/* --title "Blockyard $V" --notes-file notes.md
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            # Created on the website first: attach the files, and fill in the notes if they were left empty.
+            gh release upload "$GITHUB_REF_NAME" out/* --clobber
+            if [ -z "$(gh release view "$GITHUB_REF_NAME" --json body --jq .body)" ]; then gh release edit "$GITHUB_REF_NAME" --notes-file notes.md; fi
+          else
+            gh release create "$GITHUB_REF_NAME" out/* --title "Blockyard $V" --notes-file notes.md
+          fi
