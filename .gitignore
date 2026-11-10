@@ -1,0 +1,9 @@
+node_modules/
+dist/
+out/
+shots/
+*.zip
+*.log
+.DS_Store
+test/fake/*.class
+test/.tmp*/

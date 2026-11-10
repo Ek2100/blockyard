@@ -1,0 +1,60 @@
+name: Release
+
+# Push a tag like v1.2.0 to build the Apple Silicon app and publish a GitHub release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-14 # Apple Silicon runner
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm test
+
+      - name: Check the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          PKG="v$(node -p "require('./package.json').version")"
+          if [ "$PKG" != "$GITHUB_REF_NAME" ]; then echo "Tag $GITHUB_REF_NAME doesn't match package.json ($PKG)"; exit 1; fi
+
+      - name: Build Blockyard.app (arm64)
+        run: npm run pack:mac
+
+      - name: Sign (ad-hoc) and zip
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          APP="dist/Blockyard-darwin-arm64/Blockyard.app"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict "$APP"
+          mkdir -p out
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "out/Blockyard-$VERSION-arm64.zip"
+          (cd out && shasum -a 256 "Blockyard-$VERSION-arm64.zip" > "Blockyard-$VERSION-arm64.zip.sha256")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Blockyard-${{ env.VERSION }}-arm64
+          path: out/*
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/release-notes.js "$VERSION" > out/notes.md
+          gh release create "$GITHUB_REF_NAME" out/Blockyard-*.zip out/Blockyard-*.sha256 \
+            --title "Blockyard $VERSION" --notes-file out/notes.md

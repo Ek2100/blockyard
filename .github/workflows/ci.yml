@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm test
+
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: UI tests (headless Electron)
+        run: |
+          xvfb-run -a -s "-screen 0 1400x1000x24" npx electron --no-sandbox test/ui-harness.js
+          xvfb-run -a -s "-screen 0 1400x1000x24" npx electron --no-sandbox test/ui-features.js
+          xvfb-run -a -s "-screen 0 1400x1000x24" npx electron --no-sandbox test/ui-v12.js
+          xvfb-run -a -s "-screen 0 1400x1000x24" npx electron --no-sandbox test/ui-update.js
