@@ -2,41 +2,75 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'claude/**']
   pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: Tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-24.04]
+        experimental: [false]
+        include:
+          # ARM: Windows on Snapdragon / Surface, Linux on Raspberry Pi 5 and ARM servers.
+          - { os: windows-11-arm, experimental: true }
+          - { os: ubuntu-24.04-arm, experimental: true }
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-      - run: npm ci
-      - run: npm test
+      - name: Linux libraries for the app
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Engine tests (real Java, fake Minecraft server, fake router, fake playit)
+        run: cargo test -p blockyard-core
+      - name: The app builds
+        run: cargo build -p blockyard
+      - name: The app also builds for Intel Macs
+        if: runner.os == 'macOS'
+        run: rustup target add x86_64-apple-darwin && cargo build -p blockyard --target x86_64-apple-darwin
 
   ui:
-    runs-on: ubuntu-latest
+    name: UI test (headless browser)
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-      - run: npm ci
-      - name: UI tests (headless Electron)
-        run: |
-          xvfb-run -a -s "-screen 0 1400x1000x24" npx electron --no-sandbox test/ui-harness.js
-          xvfb-run -a -s "-screen 0 1400x1000x24" npx electron --no-sandbox test/ui-features.js
-          xvfb-run -a -s "-screen 0 1400x1000x24" npx electron --no-sandbox test/ui-v12.js
-          xvfb-run -a -s "-screen 0 1400x1000x24" npx electron --no-sandbox test/ui-update.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-screenshots
+          path: shots/
+
+  live:
+    name: Outside services still work
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p blockyard-core --test live -- --ignored --nocapture

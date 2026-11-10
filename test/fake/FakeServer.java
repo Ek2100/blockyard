@@ -7,6 +7,19 @@ import java.util.*;
 /** Mimics a vanilla Minecraft server's console closely enough to exercise Blockyard. */
 public class FakeServer {
     static final List<String> players = new ArrayList<>();
+    static final List<String> whitelist = new ArrayList<>();
+    static void saveWhitelist() throws IOException {
+        StringBuilder b = new StringBuilder("[");
+        for (int i = 0; i < whitelist.size(); i++) b.append(i > 0 ? "," : "").append("{\"uuid\":\"00000000-0000-0000-0000-00000000000").append(i).append("\",\"name\":\"").append(whitelist.get(i)).append("\"}");
+        Files.write(Paths.get("whitelist.json"), b.append("]").toString().getBytes());
+    }
+    static void setProp(String key, String value) throws IOException {
+        Path p = Paths.get("server.properties");
+        List<String> out = new ArrayList<>(); boolean found = false;
+        if (Files.exists(p)) for (String l : Files.readAllLines(p)) { if (l.startsWith(key + "=")) { out.add(key + "=" + value); found = true; } else out.add(l); }
+        if (!found) out.add(key + "=" + value);
+        Files.write(p, out);
+    }
     static final SimpleDateFormat F = new SimpleDateFormat("HH:mm:ss");
     static void log(String level, String msg) {
         System.out.println("[" + F.format(new Date()) + "] [Server thread/" + level + "]: " + msg);
@@ -84,6 +97,15 @@ public class FakeServer {
                     log("INFO", "Saving the game (this may take a moment!)");
                     Thread.sleep(150);
                     log("INFO", "Saved the game");
+                    break;
+                case "whitelist":
+                    if (p.length > 2 && p[1].equals("add")) {
+                        if (whitelist.contains(p[2])) log("INFO", "Player is already whitelisted");
+                        else { whitelist.add(p[2]); saveWhitelist(); log("INFO", "Added " + p[2] + " to the whitelist"); }
+                    } else if (p.length > 1 && (p[1].equals("on") || p[1].equals("off"))) {
+                        setProp("white-list", p[1].equals("on") ? "true" : "false");
+                        log("INFO", "Whitelist is now turned " + p[1]);
+                    } else log("INFO", "Unknown or incomplete command, see below for error");
                     break;
                 case "say":
                     log("INFO", "[Server] " + (p.length > 1 ? line.trim().substring(4) : ""));

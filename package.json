@@ -1,43 +1,17 @@
 {
   "name": "blockyard",
-  "productName": "Blockyard",
-  "version": "1.2.0",
-  "description": "A free Mac app for hosting Minecraft servers: Paper, Purpur, Fabric, Forge, NeoForge and Vanilla, with a console, players, plugins, crossplay and public access.",
-  "author": "Ek2100",
+  "private": true,
+  "version": "2.0.0",
+  "description": "Host a Minecraft server on Mac, Windows or Linux without the terminal.",
   "license": "MIT",
-  "homepage": "https://github.com/Ek2100/blockyard",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Ek2100/blockyard.git"
-  },
-  "bugs": {
-    "url": "https://github.com/Ek2100/blockyard/issues"
-  },
-  "keywords": [
-    "minecraft",
-    "minecraft-server",
-    "macos",
-    "electron",
-    "paper",
-    "fabric",
-    "forge",
-    "neoforge",
-    "geyser",
-    "server-manager"
-  ],
-  "main": "src/main/main.js",
   "scripts": {
-    "start": "electron .",
-    "test": "node --test test/backend.test.js test/features.test.js test/v12.test.js test/updates.test.js",
-    "test:ui": "xvfb-run -a electron --no-sandbox test/ui-harness.js && xvfb-run -a electron --no-sandbox test/ui-features.js && xvfb-run -a electron --no-sandbox test/ui-v12.js && xvfb-run -a electron --no-sandbox test/ui-update.js",
-    "pack:mac": "electron-packager . Blockyard --platform=darwin --arch=arm64 --out=dist --overwrite --icon=build/icon.icns --app-bundle-id=app.blockyard.desktop --app-category-type=public.app-category.utilities --ignore=^/dist --ignore=^/out --ignore=^/node_modules --ignore=^/test --ignore=^/shots --ignore=^/docs --ignore=^/\\\\.github --ignore=^/scripts --ignore=^/build/icon.png",
-    "screenshots": "xvfb-run -a -s \"-screen 0 3000x2200x24\" electron --no-sandbox scripts/screenshots/capture.js && SHOT_THEME=dark xvfb-run -a -s \"-screen 0 3000x2200x24\" electron --no-sandbox scripts/screenshots/capture.js"
-  },
-  "engines": {
-    "node": ">=20"
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "test": "cargo test -p blockyard-core",
+    "test:ui": "cargo build -p blockyard-core --bins && node tests/ui/run.js"
   },
   "devDependencies": {
-    "@electron/packager": "^20.3.0",
-    "electron": "^45.2.3"
+    "@tauri-apps/cli": "^2.9.0",
+    "playwright": "^1.56.0"
   }
 }
