@@ -154,8 +154,9 @@ pub async fn install(major: u32, log: Log) -> Result<String> {
         l(format!("Downloading Java {feature}… {:.1}{} MB", got as f64 / 1048576.0, if total > 0 { format!(" / {:.1}", total as f64 / 1048576.0) } else { String::new() }), (total > 0).then(|| got as f64 / total as f64));
     };
     if let Err(e) = net::download(&adoptium_url(feature, os, arch), &archive, progress(log.clone())).await {
-        if arch != "aarch64" || os != "mac" { return Err(e); }
-        log(format!("No Apple Silicon build of Java {feature}, using the Intel one (runs through Rosetta)."), None);
+        // Older Java versions have no ARM build for every OS; the x64 one runs through Rosetta / Windows' emulation.
+        if arch != "aarch64" || os == "linux" { return Err(e); }
+        log(format!("No ARM build of Java {feature}, using the Intel/AMD one (runs through {}).", if os == "mac" { "Rosetta" } else { "Windows' x64 emulation" }), None);
         arch = "x64";
         net::download(&adoptium_url(feature, os, arch), &archive, progress(log.clone())).await?;
     }

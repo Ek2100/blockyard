@@ -23,8 +23,10 @@ process.stdout.write(`${section || `Blockyard ${version}.`}
 | | |
 |---|---|
 | **Mac** (Apple Silicon and Intel) | \`Blockyard_${version}_universal.dmg\`: open it and drag Blockyard into Applications. |
-| **Windows 10/11** | \`Blockyard_${version}_x64-setup.exe\` installs it, or \`Blockyard_${version}_x64-portable.exe\` runs without installing. |
-| **Linux** | \`Blockyard_${version}_amd64.AppImage\`: make it executable and run it. |
+| **Windows 10/11** (most PCs) | \`Blockyard_${version}_x64-setup.exe\` installs it, or \`Blockyard_${version}_x64-portable.exe\` runs without installing. |
+| **Windows on ARM** (Snapdragon, Surface Pro X) | \`Blockyard_${version}_arm64-setup.exe\` or \`Blockyard_${version}_arm64-portable.exe\`. |
+| **Linux** (most PCs) | \`Blockyard_${version}_amd64.AppImage\` (make it executable and run it), or \`Blockyard_${version}_amd64.deb\` for Ubuntu/Debian. |
+| **Linux on ARM** (Raspberry Pi 5, ARM servers) | \`Blockyard_${version}_aarch64.AppImage\` or \`Blockyard_${version}_aarch64.deb\`. |
 
 **First launch on Mac:** macOS says it can't check the app for malware, because Blockyard isn't notarized by Apple. Click **Done**, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only do this once.
 

@@ -11,14 +11,17 @@ permissions:
 
 jobs:
   build:
-    name: Build (${{ matrix.name }})
+    name: Build (${{ matrix.name }} ${{ matrix.arch }})
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { name: mac, os: macos-latest, args: '--target universal-apple-darwin', targets: 'aarch64-apple-darwin,x86_64-apple-darwin' }
-          - { name: windows, os: windows-latest, args: '', targets: '' }
-          - { name: linux, os: ubuntu-24.04, args: '--bundles appimage', targets: '' }
+          # One .dmg for Apple Silicon and Intel Macs.
+          - { name: mac, os: macos-latest, args: '--target universal-apple-darwin', targets: 'aarch64-apple-darwin,x86_64-apple-darwin', arch: universal }
+          - { name: windows, os: windows-latest, args: '--bundles nsis', targets: '', arch: x64 }
+          - { name: windows, os: windows-11-arm, args: '--bundles nsis', targets: '', arch: arm64 }
+          - { name: linux, os: ubuntu-24.04, args: '--bundles appimage,deb', targets: '', arch: amd64 }
+          - { name: linux, os: ubuntu-24.04-arm, args: '--bundles appimage,deb', targets: '', arch: aarch64 }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +38,7 @@ jobs:
           node-version: 22
       - name: Linux libraries
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev xdg-utils
       - name: Tests first
         run: cargo test -p blockyard-core
       - name: Check the tag matches package.json
@@ -52,19 +55,21 @@ jobs:
         run: |
           V="$(node -p "require('./package.json').version")"
           mkdir -p out
+          A="${{ matrix.arch }}"
           case "${{ matrix.name }}" in
             mac)
               cp target/universal-apple-darwin/release/bundle/dmg/*.dmg "out/Blockyard_${V}_universal.dmg" ;;
             windows)
-              cp target/release/bundle/nsis/*-setup.exe "out/Blockyard_${V}_x64-setup.exe"
-              cp target/release/[Bb]lockyard.exe "out/Blockyard_${V}_x64-portable.exe" ;;
+              cp target/release/bundle/nsis/*-setup.exe "out/Blockyard_${V}_${A}-setup.exe"
+              cp target/release/[Bb]lockyard.exe "out/Blockyard_${V}_${A}-portable.exe" ;;
             linux)
-              cp target/release/bundle/appimage/*.AppImage "out/Blockyard_${V}_amd64.AppImage" ;;
+              cp target/release/bundle/appimage/*.AppImage "out/Blockyard_${V}_${A}.AppImage"
+              cp target/release/bundle/deb/*.deb "out/Blockyard_${V}_${A}.deb" ;;
           esac
           cd out && for f in *; do shasum -a 256 "$f" > "$f.sha256"; done && ls -la
       - uses: actions/upload-artifact@v4
         with:
-          name: blockyard-${{ matrix.name }}
+          name: blockyard-${{ matrix.name }}-${{ matrix.arch }}
           path: out/*
 
   publish:

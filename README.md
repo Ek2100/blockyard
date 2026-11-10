@@ -81,8 +81,8 @@ Download from the [latest release](https://github.com/Ek2100/blockyard/releases/
 | | |
 |---|---|
 | **Mac** (Apple Silicon and Intel, macOS 11+) | `Blockyard_x.y.z_universal.dmg`: open it and drag Blockyard into Applications. |
-| **Windows 10/11** | `Blockyard_x.y.z_x64-setup.exe` installs it. `Blockyard_x.y.z_x64-portable.exe` is a single file that runs without installing. |
-| **Linux** | `Blockyard_x.y.z_amd64.AppImage`: make it executable and run it. |
+| **Windows 10/11** | `Blockyard_x.y.z_x64-setup.exe` installs it. `Blockyard_x.y.z_x64-portable.exe` is a single file that runs without installing. On ARM PCs (Snapdragon, Surface Pro X), use the `arm64` files. |
+| **Linux** | `Blockyard_x.y.z_amd64.AppImage` (make it executable and run it) or `Blockyard_x.y.z_amd64.deb` for Ubuntu/Debian. On ARM (Raspberry Pi 5, ARM servers), use the `aarch64` files. |
 
 You don't need to install Java first: Blockyard downloads the right version when a server needs it.
 
@@ -113,7 +113,7 @@ The router only opens the Minecraft port, and only while the server is running o
 
 **Can I use it with a server I already have?** Yes. Use **Import Existing…** and pick the folder. Blockyard detects the software, version, jar and port.
 
-**Which systems?** macOS 11+ (Apple Silicon and Intel), Windows 10 and 11, and Linux (AppImage). playit.gg tunnels are available on Mac and Windows.
+**Which systems?** macOS 11+ (Apple Silicon and Intel), Windows 10 and 11 (Intel/AMD and ARM), and Linux (Intel/AMD and ARM, as AppImage or .deb). playit.gg tunnels are available on Mac and Windows.
 
 ## Privacy
 
@@ -171,7 +171,7 @@ test/fake/   The fake Minecraft server and installer (Java)
 
 1. Bump `version` in `package.json` (and optionally add a section to `CHANGELOG.md`).
 2. Commit, then tag and push: `git tag v2.0.0 && git push --tags`.
-3. GitHub Actions tests it on Mac, Windows and Linux, builds the Mac `.dmg`, the Windows installer and portable `.exe` and the Linux AppImage, and publishes a release with SHA-256 checksums.
+3. GitHub Actions tests it on Mac, Windows and Linux, builds a universal Mac `.dmg`, Windows installers and portable `.exe`s (x64 and ARM) and Linux AppImages and `.deb`s (x64 and ARM), and publishes a release with SHA-256 checksums.
 
 ## Contributing
 

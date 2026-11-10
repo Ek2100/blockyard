@@ -16,7 +16,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-24.04]
+        experimental: [false]
+        include:
+          # ARM: Windows on Snapdragon / Surface, Linux on Raspberry Pi 5 and ARM servers.
+          - { os: windows-11-arm, experimental: true }
+          - { os: ubuntu-24.04-arm, experimental: true }
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -32,6 +38,9 @@ jobs:
         run: cargo test -p blockyard-core
       - name: The app builds
         run: cargo build -p blockyard
+      - name: The app also builds for Intel Macs
+        if: runner.os == 'macOS'
+        run: rustup target add x86_64-apple-darwin && cargo build -p blockyard --target x86_64-apple-darwin
 
   ui:
     name: UI test (headless browser)
