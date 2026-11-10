@@ -5,7 +5,7 @@ members = ["core", "app"]
 default-members = ["core"]
 
 [workspace.package]
-version = "2.0.0"
+version = "2.0.1"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/Ek2100/blockyard"

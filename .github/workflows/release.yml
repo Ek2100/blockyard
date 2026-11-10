@@ -39,7 +39,7 @@ jobs:
           node-version: 22
       - name: Linux libraries
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev xdg-utils
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev xdg-utils xvfb
       - name: Tests first
         run: cargo test -p blockyard-core
       - name: Check the tag matches package.json
@@ -51,6 +51,16 @@ jobs:
       - run: npm install --no-audit --no-fund
       - name: Build
         run: npx tauri build ${{ matrix.args }}
+      - name: Launch the built app (the files users download), or stop here
+        shell: bash
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          case "${{ matrix.name }}" in
+            mac) node scripts/smoke-test.js "$(ls -d target/universal-apple-darwin/release/bundle/macos/*.app)/Contents/MacOS/Blockyard" ;;
+            windows) node scripts/smoke-test.js "$(ls target/release/[Bb]lockyard.exe)" ;;
+            linux) chmod +x target/release/bundle/appimage/*.AppImage && node scripts/smoke-test.js "$(ls target/release/bundle/appimage/*.AppImage)" ;;
+          esac
       - name: Collect files
         shell: bash
         run: |
