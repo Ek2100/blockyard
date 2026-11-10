@@ -197,7 +197,20 @@ async fn call(app: AppHandle, channel: String, args: Vec<Value>) -> Result<Value
             }
             Ok(json!(m.is_enabled().unwrap_or(false)))
         }
-        _ => core_of(&app).call(&channel, args).await.map_err(|e| e.to_string()),
+        _ => {
+            let r = core_of(&app).call(&channel, args).await.map_err(|e| e.to_string());
+            // Launch test: the UI's first real request means window + web view + bridge + engine all work.
+            if channel == "servers:list" {
+                if let Some(out) = smoke_test() {
+                    static ONCE: std::sync::Once = std::sync::Once::new();
+                    let first = r.as_ref().ok().and_then(|v| v.as_array().and_then(|a| a.first()).and_then(|s| s["id"].as_str().map(String::from)));
+                    let ui = match &r { Ok(_) => Ok(()), Err(e) => Err(e.clone()) };
+                    let app2 = app.clone();
+                    ONCE.call_once(move || { tauri::async_runtime::spawn(smoke_run(app2, out, ui, first)); });
+                }
+            }
+            r
+        }
     }
 }
 
@@ -440,7 +453,48 @@ fn dirs_next_data_dir() -> Option<PathBuf> {
     else { Some(std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).unwrap_or_else(|| home.join(".config"))) }
 }
 
+/// Launch test (CI): the UI must load and reach the engine, then the app exits by itself.
+fn smoke_test() -> Option<PathBuf> { std::env::var_os("BLOCKYARD_SMOKE_TEST").map(PathBuf::from) }
+
+/// The rest of the launch test: with a server set up, start it from inside the real app, wait until
+/// it's online, stop it cleanly, then report and quit.
+async fn smoke_run(app: AppHandle, out: PathBuf, ui: Result<(), String>, server: Option<String>) {
+    use std::time::Duration;
+    let core = core_of(&app);
+    let state = |id: &str| core.tray_items().into_iter().find(|t| t["id"] == id).map(|t| s(&t["state"])).unwrap_or_default();
+    let result: Result<String, String> = async {
+        ui.map_err(|e| format!("the UI's first request failed: {e}"))?;
+        if main_window(&app).is_none() { return Err("no window".into()); }
+        if core.store.settings()["menuBar"] != false && app.tray_by_id("main").is_none() && !cfg!(target_os = "linux") { return Err("no tray icon".into()); }
+        let Some(id) = server else { return Ok("UI loaded, engine answered".into()) };
+        core.start_server(&id, true).await.map_err(|e| format!("start failed: {e}"))?;
+        for _ in 0..240 { if state(&id) == "online" { break; } tokio::time::sleep(Duration::from_millis(250)).await; }
+        if state(&id) != "online" { return Err(format!("server didn't come online (state: {})", state(&id))); }
+        core.stop_server(&id).await.map_err(|e| e.to_string())?;
+        for _ in 0..240 { if state(&id) == "stopped" { break; } tokio::time::sleep(Duration::from_millis(250)).await; }
+        if state(&id) != "stopped" { return Err("server didn't stop".into()); }
+        Ok("UI loaded, engine answered, server started and stopped".into())
+    }.await;
+    let ok = result.is_ok();
+    let _ = std::fs::write(&out, match result { Ok(m) => format!("ok: {m}"), Err(e) => format!("error: {e}") });
+    tokio::time::sleep(Duration::from_millis(1000)).await;
+    app.state::<AppState>().quitting.store(true, Ordering::SeqCst);
+    app.exit(if ok { 0 } else { 4 });
+}
+
 fn main() {
+    // One async runtime for everything, entered on the main thread too: start-up code (setup, menus,
+    // the tray) runs there and starts background work, which needs a runtime to exist.
+    let rt = tokio::runtime::Builder::new_multi_thread().enable_all().thread_name("blockyard").build().expect("async runtime");
+    tauri::async_runtime::set(rt.handle().clone());
+    let _in_runtime = rt.enter();
+    if let Some(out) = smoke_test() {
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_secs(90));
+            let _ = std::fs::write(&out, "timeout: the window never loaded the UI");
+            std::process::exit(3);
+        });
+    }
     let host = Arc::new(AppHost { app: OnceLock::new(), tray_gen: AtomicU64::new(0) });
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_window(app, None)))
@@ -455,7 +509,8 @@ fn main() {
             move |app| {
                 let handle = app.handle().clone();
                 let _ = host.app.set(handle.clone());
-                let data_dir = app.path().app_data_dir().unwrap_or_else(|_| blockyard_core::paths::home().join(".blockyard"));
+                let data_dir = std::env::var_os("BLOCKYARD_DATA_DIR").map(PathBuf::from)
+                    .unwrap_or_else(|| app.path().app_data_dir().unwrap_or_else(|_| blockyard_core::paths::home().join(".blockyard")));
                 migrate_from_v1(&data_dir);
                 let core = Core::new(host.clone(), CoreOpts { data_dir, version: app.package_info().version.to_string(), mapper: None, playit: None });
                 app.manage(AppState { core: core.clone(), host: host.clone(), quitting: AtomicBool::new(false) });
