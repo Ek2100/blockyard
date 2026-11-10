@@ -8,3 +8,4 @@ shots/
 test/fake/*.class
 test/.tmp*/
 /target
+app/gen/

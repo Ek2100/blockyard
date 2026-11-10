@@ -368,6 +368,7 @@ name = "blockyard"
 version = "2.0.0"
 dependencies = [
  "blockyard-core",
+ "futures-util",
  "serde",
  "serde_json",
  "tauri",

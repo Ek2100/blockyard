@@ -17,6 +17,11 @@ pub async fn lock() -> tokio::sync::MutexGuard<'static, ()> {
     L.get_or_init(|| tokio::sync::Mutex::new(())).lock().await
 }
 
+/// Skip a test that needs Java when BLOCKYARD_NO_JAVA is set (only used for Windows-under-Wine runs;
+/// real Windows/macOS/Linux CI always runs them).
+#[macro_export]
+macro_rules! needs_java { () => { if std::env::var("BLOCKYARD_NO_JAVA").is_ok() { eprintln!("skipped: needs Java"); return; } } }
+
 pub async fn java() -> String {
     if let Ok(j) = std::env::var("BLOCKYARD_TEST_JAVA") { return j; }
     blockyard_core::java::list(true).await.first().map(|j| j.path.clone()).expect("tests need Java 17+ installed (or BLOCKYARD_TEST_JAVA)")

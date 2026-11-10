@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["core", "app"]
-# The app crate is still being wired up; `cargo test` at the root runs the engine.
+# `cargo test` at the root runs the engine (the app also needs WebKit on Linux).
 default-members = ["core"]
 
 [workspace.package]

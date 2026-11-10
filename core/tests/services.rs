@@ -37,6 +37,7 @@ async fn version_lists() {
 
 #[tokio::test]
 async fn create_paper_server_then_failed_create_cleans_up() {
+    needs_java!();
     let _g = lock().await;
     mock_http().await;
     providers::reset_caches();
@@ -67,6 +68,7 @@ async fn create_paper_server_then_failed_create_cleans_up() {
 
 #[tokio::test]
 async fn neoforge_runs_its_installer_and_launches_via_the_args_file() {
+    needs_java!();
     let _g = lock().await;
     mock_http().await;
     providers::reset_caches();

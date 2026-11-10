@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The Blockyard window: calls into the engine and receives its events. Everything else (files, dialogs, links) is done by the Rust side.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

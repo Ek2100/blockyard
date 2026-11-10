@@ -568,7 +568,8 @@ impl Core {
             for a in &accounts { if files::whitelist_add(&dir, s(&a["uuid"]), s(&a["name"]))? { added.push(s(&a["name"]).into()); } }
             props::set(&dir, &[("white-list", "true"), ("enforce-whitelist", "true")])?;
         }
-        if inst.is_some() { props::set(&dir, &[("enforce-whitelist", "true")])?; }
+        // The server saves this itself too; writing it now keeps the safety status accurate right away.
+        if inst.is_some() { props::set(&dir, &[("white-list", "true"), ("enforce-whitelist", "true")])?; }
         added.dedup();
         Ok(json!({ "whitelistOn": true, "added": added }))
     }
@@ -1061,7 +1062,7 @@ impl Core {
                 let on = arg(a, 1) == true;
                 let cfg = scfg!();
                 match self.existing(&id).filter(|i| i.state() == "online") {
-                    Some(i) => { i.send(if on { "whitelist on" } else { "whitelist off" })?; props::set(&dir_of(&cfg), &[("enforce-whitelist", if on { "true" } else { "false" })])?; }
+                    Some(i) => { i.send(if on { "whitelist on" } else { "whitelist off" })?; props::set(&dir_of(&cfg), &[("white-list", if on { "true" } else { "false" }), ("enforce-whitelist", if on { "true" } else { "false" })])?; }
                     None => props::set(&dir_of(&cfg), &[("white-list", if on { "true" } else { "false" }), ("enforce-whitelist", if on { "true" } else { "false" })])?,
                 }
                 if on { let _ = self.secure_for_public(&id).await; }

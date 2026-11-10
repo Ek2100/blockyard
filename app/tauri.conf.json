@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Blockyard",
+  "mainBinaryName": "Blockyard",
+  "identifier": "app.blockyard.desktop",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' https://mc-heads.net https://cdn.modrinth.com data: asset:; style-src 'self'; script-src 'self'; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app",
+      "dmg",
+      "nsis",
+      "appimage"
+    ],
+    "category": "Utility",
+    "shortDescription": "Host a Minecraft server without the terminal.",
+    "longDescription": "Blockyard runs Paper, Purpur, Fabric, Forge, NeoForge and Vanilla Minecraft servers with a console, players, plugins, modpacks, backups, stats, crossplay and safe public access.",
+    "copyright": "MIT licence. Not affiliated with Mojang or Microsoft.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "icons/trayTemplate.png": "trayTemplate.png",
+      "icons/trayTemplate@2x.png": "trayTemplate@2x.png"
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      }
+    }
+  },
+  "version": "../package.json"
+}

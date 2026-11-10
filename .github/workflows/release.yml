@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag like v1.2.0 to build the Apple Silicon app and publish a GitHub release.
+# Push a tag like v2.0.0 to build Blockyard for Mac, Windows and Linux and publish a GitHub release.
 on:
   push:
     tags: ['v*']
@@ -10,51 +10,77 @@ permissions:
   contents: write
 
 jobs:
-  mac:
-    runs-on: macos-14 # Apple Silicon runner
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: mac, os: macos-14, args: '--target universal-apple-darwin', targets: 'aarch64-apple-darwin,x86_64-apple-darwin' }
+          - { name: windows, os: windows-latest, args: '', targets: '' }
+          - { name: linux, os: ubuntu-22.04, args: '--bundles appimage', targets: '' }
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          node-version: 22
-          cache: npm
+          targets: ${{ matrix.targets }}
+      - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-      - run: npm ci
-      - run: npm test
-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Linux libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Tests first
+        run: cargo test -p blockyard-core
       - name: Check the tag matches package.json
         if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
         run: |
           PKG="v$(node -p "require('./package.json').version")"
           if [ "$PKG" != "$GITHUB_REF_NAME" ]; then echo "Tag $GITHUB_REF_NAME doesn't match package.json ($PKG)"; exit 1; fi
-
-      - name: Build Blockyard.app (arm64)
-        run: npm run pack:mac
-
-      - name: Sign (ad-hoc) and zip
+      - run: npm install --no-audit --no-fund
+      - name: Build
+        run: npx tauri build ${{ matrix.args }}
+      - name: Collect files
+        shell: bash
         run: |
-          VERSION="$(node -p "require('./package.json').version")"
-          APP="dist/Blockyard-darwin-arm64/Blockyard.app"
-          codesign --force --deep --sign - "$APP"
-          codesign --verify --deep --strict "$APP"
+          V="$(node -p "require('./package.json').version")"
           mkdir -p out
-          ditto -c -k --sequesterRsrc --keepParent "$APP" "out/Blockyard-$VERSION-arm64.zip"
-          (cd out && shasum -a 256 "Blockyard-$VERSION-arm64.zip" > "Blockyard-$VERSION-arm64.zip.sha256")
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-
+          case "${{ matrix.name }}" in
+            mac)
+              cp target/universal-apple-darwin/release/bundle/dmg/*.dmg "out/Blockyard_${V}_universal.dmg" ;;
+            windows)
+              cp target/release/bundle/nsis/*-setup.exe "out/Blockyard_${V}_x64-setup.exe"
+              cp target/release/[Bb]lockyard.exe "out/Blockyard_${V}_x64-portable.exe" ;;
+            linux)
+              cp target/release/bundle/appimage/*.AppImage "out/Blockyard_${V}_amd64.AppImage" ;;
+          esac
+          cd out && for f in *; do shasum -a 256 "$f" > "$f.sha256"; done && ls -la
       - uses: actions/upload-artifact@v4
         with:
-          name: Blockyard-${{ env.VERSION }}-arm64
+          name: blockyard-${{ matrix.name }}
           path: out/*
 
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
       - name: Publish GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          node scripts/release-notes.js "$VERSION" > out/notes.md
-          gh release create "$GITHUB_REF_NAME" out/Blockyard-*.zip out/Blockyard-*.sha256 \
-            --title "Blockyard $VERSION" --notes-file out/notes.md
+          V="$(node -p "require('./package.json').version")"
+          node scripts/release-notes.js "$V" > notes.md
+          gh release create "$GITHUB_REF_NAME" out/* --title "Blockyard $V" --notes-file notes.md

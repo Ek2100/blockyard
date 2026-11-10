@@ -5,24 +5,24 @@
 <h1 align="center">Blockyard</h1>
 
 <p align="center">
-  <b>Host a Minecraft server on your Mac, without the terminal.</b><br>
-  Paper, Purpur, Fabric, Forge, NeoForge and Vanilla, with a console, players, plugins, stats, crossplay and public access in one window.
+  <b>Host a Minecraft server on your Mac or PC, without the terminal.</b><br>
+  Paper, Purpur, Fabric, Forge, NeoForge, Vanilla and modpacks, with a console, players, plugins, stats, crossplay and safe public access in one small app.
 </p>
 
 <p align="center">
   <a href="https://github.com/Ek2100/blockyard/releases/latest"><img alt="Download" src="https://img.shields.io/github/v/release/Ek2100/blockyard?label=download&color=2f9e44"></a>
-  <img alt="macOS 13+ on Apple Silicon" src="https://img.shields.io/badge/macOS-13%2B%20·%20Apple%20Silicon-333">
+  <img alt="macOS, Windows and Linux" src="https://img.shields.io/badge/macOS%20·%20Windows%20·%20Linux-333">
   <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/Ek2100/blockyard?color=555"></a>
   <a href="https://github.com/Ek2100/blockyard/actions/workflows/ci.yml"><img alt="Tests" src="https://github.com/Ek2100/blockyard/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Ek2100/blockyard/releases/latest"><b>⬇︎ Download for Mac</b></a>
+  <a href="https://github.com/Ek2100/blockyard/releases/latest"><b>⬇︎ Download for Mac, Windows or Linux</b></a>
 </p>
 
 ![Blockyard showing a running Paper server's console](docs/screenshots/01-console.png)
 
-Blockyard is a free app that runs the normal Minecraft server for you. It downloads the server and the right Java, starts it, and gives you buttons for everything you'd otherwise type. Your server stays a plain, standard Minecraft folder, so you can open it in any other tool or move it to a host later.
+Blockyard is a free, lightweight app (written in Rust) that runs the normal Minecraft server for you. It downloads the server and the right Java, starts it, and gives you buttons for everything you'd otherwise type. Your server stays a plain, standard Minecraft folder, so you can open it in any other tool or move it to a host later.
 
 ## Features
 
@@ -30,7 +30,13 @@ Blockyard is a free app that runs the normal Minecraft server for you. It downlo
 
 **Turn a singleplayer world into a server.** Blockyard copies the world (your original is never touched), keeps its game mode and difficulty, and moves your inventory and position to your account so you spawn where you left off.
 
-**Let friends join from anywhere.** Choose *Friends anywhere* and Blockyard opens the port on your router (UPnP / NAT-PMP), then checks from the internet that it worked. If your provider blocks incoming connections (Starlink, 4G/5G home internet), it sets up a free [playit.gg](https://playit.gg) tunnel instead.
+**Let friends join from anywhere, safely.** Choose *Friends anywhere* and Blockyard opens the port on your router (UPnP / NAT-PMP), then checks from the internet that it worked. If your provider blocks incoming connections (Starlink, 4G/5G home internet), it sets up a free [playit.gg](https://playit.gg) tunnel instead. It also turns the whitelist on, keeps you and anyone already playing on it, and explains the risks in plain words.
+
+**Invite friends.** Type a friend's username: Blockyard looks up their account, adds them to the whitelist and writes the message to send them, address included.
+
+**Sleep mode.** When nobody has been online for a while, the server stops to free memory and power. It stays visible as "asleep" in your friends' server lists and starts again as soon as a whitelisted player tries to join. Strangers can't wake it.
+
+**Modpacks.** Install any Modrinth modpack (search, or open a `.mrpack` file). Blockyard sets up the exact Fabric, Forge or NeoForge version, downloads every mod with its checksum checked, copies the pack's settings and skips client-only mods.
 
 **Bedrock crossplay.** One click installs Geyser and Floodgate, so friends on phones, tablets, Windows and consoles can join your Java server.
 
@@ -41,14 +47,15 @@ Blockyard is a free app that runs the normal Minecraft server for you. It downlo
 **Everything else you'd want:**
 - Console with colour-coded warnings and errors, command history and quick commands
 - Players: kick, ban, op, gamemode; whitelist, ops and ban lists
-- File browser and editor, with drag-and-drop from Finder
+- File browser and editor, with drag-and-drop from Finder or File Explorer
 - A form for `server.properties`
 - World switching, resets with a new seed, and copying server worlds back to singleplayer
 - Changing the Minecraft version safely, with a backup first and downgrades blocked
 - Backups on demand or on a schedule, with one-click restore
 - Auto-restart after a crash, daily restarts with warnings, scheduled commands
-- Discord notifications, a log and crash-report viewer, a menu bar icon, and alerts when players join
-- Keeps your Mac awake while a server runs, and stops servers cleanly when you quit
+- Discord notifications, a log and crash-report viewer, a menu bar / system tray icon, and alerts when players join
+- Opens at login and starts your servers by itself, if you want
+- Keeps your computer awake while a server runs, and stops servers cleanly when you quit
 
 ## Screenshots
 
@@ -63,39 +70,50 @@ Blockyard is a free app that runs the normal Minecraft server for you. It downlo
 | ![New server wizard, first step](docs/screenshots/08-new-server.png) | ![Choosing a singleplayer world to turn into a server](docs/screenshots/09-import-world.png) |
 | **New Server** wizard | **Bring in a singleplayer world** |
 
-It follows your Mac's light or dark appearance:
+It follows your system's light or dark appearance:
 
 ![Stats tab in dark mode](docs/screenshots/dark-03-stats.png)
 
 ## Install
 
-1. Download **Blockyard-x.y.z-arm64.zip** from the [latest release](https://github.com/Ek2100/blockyard/releases/latest) and unzip it.
-2. Drag **Blockyard** into **Applications** and open it.
-3. The first time, macOS says it can't check the app for malware, because Blockyard isn't notarized by Apple (that needs a paid developer account). Click **Done**, then open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Blockyard. You only do this once.
+Download from the [latest release](https://github.com/Ek2100/blockyard/releases/latest):
 
-If macOS says the app is "damaged", run this once in Terminal and open it again:
+| | |
+|---|---|
+| **Mac** (Apple Silicon and Intel, macOS 11+) | `Blockyard_x.y.z_universal.dmg`: open it and drag Blockyard into Applications. |
+| **Windows 10/11** | `Blockyard_x.y.z_x64-setup.exe` installs it. `Blockyard_x.y.z_x64-portable.exe` is a single file that runs without installing. |
+| **Linux** | `Blockyard_x.y.z_amd64.AppImage`: make it executable and run it. |
+
+You don't need to install Java first: Blockyard downloads the right version when a server needs it.
+
+**First launch on Mac:** macOS says it can't check the app for malware, because Blockyard isn't notarized by Apple (that needs a paid developer account). Click **Done**, then open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to Blockyard. You only do this once. If macOS says the app is "damaged", run this once in Terminal and open it again:
 
 ```sh
 xattr -dr com.apple.quarantine /Applications/Blockyard.app
 ```
 
-**Requirements:** a Mac with Apple Silicon (M1 or later) and macOS 13 Ventura or later. You don't need to install Java first.
+**First launch on Windows:** if SmartScreen says "Windows protected your PC", click **More info → Run anyway** (Blockyard isn't code-signed yet). The first time a server starts, Windows asks whether Java may use the network: click **Allow**, or friends outside your home can't connect. Public Access has a button to fix it if you missed the prompt.
 
-**Updating:** Blockyard tells you when a new version is out (you can turn this off in ⚙︎ Settings). Download it and replace the app in Applications. Your servers and settings aren't touched.
+**Updating:** Blockyard tells you when a new version is out (you can turn this off in ⚙︎ Settings). Download it and install it over the old one. Your servers and settings aren't touched.
 
 ## FAQ
 
 **Is it really free?** Yes. It's open source under the MIT licence. There are no accounts, ads or paid features.
 
-**Can a Mac run a Minecraft server well?** Yes. Apple Silicon Macs are fast at this. A few friends on Paper is comfortable on any M-series Mac with 8 GB of memory; give the server more memory for big modpacks.
+**Can my computer run a Minecraft server well?** Most can. A few friends on Paper is comfortable on any Apple Silicon Mac or recent PC with 8 GB of memory; give the server more memory for big modpacks.
 
-**Does my Mac need to stay on?** Yes. The server runs on your Mac, so friends can only join while it's awake and Blockyard is running. Blockyard stops idle sleep while a server runs, but closing a MacBook's lid still sleeps it.
+**Does my computer need to stay on?** Yes. The server runs on your computer, so friends can only join while it's awake and Blockyard is running. Blockyard stops idle sleep while a server runs, but closing a laptop's lid usually still sleeps it.
 
-**Is opening a port safe?** The router only opens the Minecraft port, and only while the server is running. Keep `online-mode=true` (the default) and use the whitelist if you only want people you know. playit.gg avoids opening anything on your router.
+**Is opening my server to the internet safe?** Mostly, if you keep two things on: the **whitelist** (Blockyard turns it on for you) and **online-mode** (the default). The risks, in short:
+- Bots scan the internet for Minecraft servers all the time, so strangers find public servers within hours. The whitelist keeps them out.
+- The server runs as you. A security hole in the server software or a malicious plugin could reach your files, so keep the server and plugins up to date and install them only from places you trust. Blockyard checks Modrinth downloads.
+- Router port forwarding shares your home internet address with the people you give it to; playit.gg hides it.
+
+The router only opens the Minecraft port, and only while the server is running or sleeping.
 
 **Can I use it with a server I already have?** Yes. Use **Import Existing…** and pick the folder. Blockyard detects the software, version, jar and port.
 
-**Intel Macs, Windows or Linux?** Not at the moment. Blockyard is built and tested for Apple Silicon Macs only.
+**Which systems?** macOS 11+ (Apple Silicon and Intel), Windows 10 and 11, and Linux (AppImage). playit.gg tunnels are available on Mac and Windows.
 
 ## Privacy
 
@@ -110,57 +128,50 @@ Blockyard has no analytics and no account. It only contacts outside services to 
 | mcstatus.io / mcsrvstat.us | **Test from Internet**: these services try to connect to your server's address |
 | playit.gg | Only if you choose the playit.gg tunnel |
 | mc-heads.net | Player head pictures in the Players and Stats tabs |
-| Mojang API | Looking up a player's UUID when you import a world |
+| Modrinth | Modpacks you choose to install |
+| Mojang API | Looking up a player's account when you invite them or import a world |
 | Discord | Only if you add a webhook |
 | GitHub | Checking for new Blockyard versions (can be turned off) |
 
 ## Where things live
 
-- **Servers:** wherever you choose. The default is `~/Minecraft Servers/<name>`.
-- **App data** (server list, stats, downloaded Java, playit agent, logs): `~/Library/Application Support/Blockyard/`
+- **Servers:** wherever you choose. The default is `~/Minecraft Servers/<name>` (Windows: `Documents\Minecraft Servers\<name>`).
+- **App data** (server list, stats, downloaded Java, playit agent, logs):
+  - Mac: `~/Library/Application Support/app.blockyard.desktop/`
+  - Windows: `%APPDATA%\app.blockyard.desktop\`
+  - Linux: `~/.local/share/app.blockyard.desktop/`
 - **Logs:** Help → Show Blockyard Logs
 
 ## Building from source
 
-You need Node.js 20+ and, for the tests, Java 21+.
+You need [Rust](https://rustup.rs) and Node.js 20+. Tests also need Java 17+. On Linux, install the WebKit libraries first (`libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev`).
 
 ```sh
 git clone https://github.com/Ek2100/blockyard.git
 cd blockyard
 npm install
-npm start            # run in development
-npm test             # backend tests
-npm run pack:mac     # builds dist/Blockyard-darwin-arm64/Blockyard.app
-```
-
-The UI tests drive the real app with fake servers, a fake router and mocked web services. They run headless on Linux in CI:
-
-```sh
-xvfb-run -a npx electron --no-sandbox test/ui-harness.js
-```
-
-The README screenshots are made the same way, with a demo server and made-up players:
-
-```sh
-xvfb-run -a -s "-screen 0 3000x2200x24" npx electron --no-sandbox scripts/screenshots/capture.js
-SHOT_THEME=dark xvfb-run -a -s "-screen 0 3000x2200x24" npx electron --no-sandbox scripts/screenshots/capture.js
+npm run dev          # run the app in development
+npm test             # engine tests: a fake Minecraft server, fake router, fake playit and mocked web services
+npm run test:ui      # the real UI in a headless browser, against the real engine
+npm run build        # the app and installer for this system, in target/release/bundle
 ```
 
 ### Project layout
 
 ```
-src/main/        Electron main process: servers, downloads, networking, backups, stats
-src/preload.js   The bridge between the window and the main process (an allow-list of channels)
-src/renderer/    The interface: plain DOM, no framework
-test/            Backend tests, UI harnesses and fakes (Minecraft server, Forge installer, router, playit)
-scripts/         Release notes and screenshot tooling
+core/        The engine (Rust library): servers, downloads, networking, backups, worlds, modpacks, sleep mode
+core/tests/  Integration tests with fakes: Minecraft server, home router, playit daemon, web services
+app/         The desktop app (Tauri): window, menus, tray icon, dialogs, notifications
+ui/          The interface: plain HTML/CSS/JS, no framework
+tests/ui/    The UI test (Playwright) and its HTTP bridge to the engine
+test/fake/   The fake Minecraft server and installer (Java)
 ```
 
 ### Releasing
 
-1. Bump `version` in `package.json` and add a section to `CHANGELOG.md`.
-2. Commit, then tag and push: `git tag v1.2.0 && git push --tags`.
-3. GitHub Actions tests it, builds and ad-hoc signs the Apple Silicon app, and publishes a release with the zip and its SHA-256.
+1. Bump `version` in `package.json` (and optionally add a section to `CHANGELOG.md`).
+2. Commit, then tag and push: `git tag v2.0.0 && git push --tags`.
+3. GitHub Actions tests it on Mac, Windows and Linux, builds the Mac `.dmg`, the Windows installer and portable `.exe` and the Linux AppImage, and publishes a release with SHA-256 checksums.
 
 ## Contributing
 

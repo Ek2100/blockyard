@@ -28,6 +28,7 @@ fn state_of(i: &Instance) -> String { i.snapshot()["state"].as_str().unwrap().to
 
 #[tokio::test]
 async fn finds_java() {
+    needs_java!();
     let j = java().await;
     let (v, major) = blockyard_core::java::version_of(std::path::Path::new(&j)).await.expect("java -version");
     assert!(major >= 17, "{v}");
@@ -35,6 +36,7 @@ async fn finds_java() {
 
 #[tokio::test]
 async fn lifecycle_players_commands_metrics_stop() {
+    needs_java!();
     let port = free_port();
     let d = server_dir(port);
     let (i, seen) = inst(d.path(), json!({ "software": "paper" }));
@@ -91,6 +93,7 @@ async fn lifecycle_players_commands_metrics_stop() {
 
 #[tokio::test]
 async fn crash_kill_and_hung_server() {
+    needs_java!();
     let d = server_dir(free_port());
     let (i, seen) = inst(d.path(), json!({}));
     let j = java().await;
@@ -120,6 +123,7 @@ async fn crash_kill_and_hung_server() {
 
 #[tokio::test]
 async fn port_in_use_and_missing_folder() {
+    needs_java!();
     let blocker = std::net::TcpListener::bind("0.0.0.0:0").unwrap();
     let port = blocker.local_addr().unwrap().port();
     let d = server_dir(port);
@@ -132,6 +136,7 @@ async fn port_in_use_and_missing_folder() {
 
 #[tokio::test]
 async fn vanilla_tick_query_and_unknown_command_disables_probe() {
+    needs_java!();
     let d = server_dir(free_port());
     let (i, _) = inst(d.path(), json!({ "software": "vanilla" }));
     i.start(&java().await, false).await.unwrap();
