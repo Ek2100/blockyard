@@ -79,8 +79,10 @@ mod tests {
             { "name": "Blockyard_2.0.0_aarch64.dmg", "browser_download_url": "https://x/mac" },
             { "name": "Blockyard_2.0.0_x64-setup.exe", "browser_download_url": "https://x/win" },
             { "name": "Blockyard_2.0.0_amd64.AppImage", "browser_download_url": "https://x/linux" }]});
+        // (The only files here are x64 ones, so ask as an x64 computer of this OS.)
         let want = if cfg!(target_os = "macos") { "https://x/mac" } else if cfg!(windows) { "https://x/win" } else { "https://x/linux" };
-        assert_eq!(pick_asset(&rel), want);
+        assert_eq!(pick_asset_for(&rel, std::env::consts::OS, "x86_64"), want);
+        assert_eq!(pick_asset_for(&rel, "linux", "aarch64"), "https://x/rel", "an x64 AppImage is never offered to ARM Linux");
         let full = json!({ "html_url": "https://x/rel", "assets": [
             { "name": "Blockyard_2.1.0_universal.dmg", "browser_download_url": "https://x/mac" },
             { "name": "Blockyard_2.1.0_x64-setup.exe", "browser_download_url": "https://x/win-x64" },

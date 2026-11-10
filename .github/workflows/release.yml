@@ -66,7 +66,7 @@ jobs:
               cp target/release/bundle/appimage/*.AppImage "out/Blockyard_${V}_${A}.AppImage"
               cp target/release/bundle/deb/*.deb "out/Blockyard_${V}_${A}.deb" ;;
           esac
-          cd out && for f in *; do shasum -a 256 "$f" > "$f.sha256"; done && ls -la
+          cd out && for f in *; do if command -v sha256sum >/dev/null; then sha256sum "$f"; else shasum -a 256 "$f"; fi > "$f.sha256"; done && ls -la
       - uses: actions/upload-artifact@v4
         with:
           name: blockyard-${{ matrix.name }}-${{ matrix.arch }}
