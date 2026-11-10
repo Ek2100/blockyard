@@ -51,8 +51,15 @@ async fn create_start_invite_go_public_sleep_and_wake() {
     call(&c, "server:start", json!([id])).await;
     wait_for("online", 30, || host.events("server:state").iter().any(|e| e["id"] == id && e["state"] == "online")).await;
     wait_for("port opened", 10, || router.state.lock().unwrap().pmp_maps.contains_key(&(port, 2))).await;
-    let v = call(&c, "access:get", json!([id])).await;
-    assert_eq!(v["publicAddress"], format!("203.0.113.7:{port}"));
+    // The router records the mapping a moment before Blockyard stores the address it answered with.
+    let want = format!("203.0.113.7:{port}");
+    let mut v = Value::Null;
+    for _ in 0..100 {
+        v = call(&c, "access:get", json!([id])).await;
+        if v["publicAddress"] == want.as_str() { break; }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    assert_eq!(v["publicAddress"], want.as_str());
     call(&c, "server:command", json!([id, "join Steve"])).await;
     wait_for("Steve online", 10, || host.notes.lock().unwrap().iter().any(|n| n.1.contains("Steve joined"))).await;
     call(&c, "server:command", json!([id, "leave Steve"])).await;
