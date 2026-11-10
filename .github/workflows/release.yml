@@ -16,9 +16,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: mac, os: macos-14, args: '--target universal-apple-darwin', targets: 'aarch64-apple-darwin,x86_64-apple-darwin' }
+          - { name: mac, os: macos-latest, args: '--target universal-apple-darwin', targets: 'aarch64-apple-darwin,x86_64-apple-darwin' }
           - { name: windows, os: windows-latest, args: '', targets: '' }
-          - { name: linux, os: ubuntu-22.04, args: '--bundles appimage', targets: '' }
+          - { name: linux, os: ubuntu-24.04, args: '--bundles appimage', targets: '' }
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
