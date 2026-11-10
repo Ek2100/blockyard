@@ -7,3 +7,4 @@ shots/
 .DS_Store
 test/fake/*.class
 test/.tmp*/
+/target
