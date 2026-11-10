@@ -35,6 +35,10 @@ child.on('exit', code => {
   const result = fs.existsSync(out) ? fs.readFileSync(out, 'utf8') : '(no result: the app quit or crashed before loading its UI)';
   const logs = path.join(data, 'logs', 'blockyard.log');
   console.log(`Result: ${result}\nExit code: ${code}`);
-  if (fs.existsSync(logs)) console.log('--- app log ---\n' + fs.readFileSync(logs, 'utf8').slice(-4000));
-  process.exit(code === 0 && result.startsWith('ok') ? 0 : 1);
+  const log = fs.existsSync(logs) ? fs.readFileSync(logs, 'utf8') : '';
+  if (log) console.log('--- app log ---\n' + log.slice(-4000));
+  // Any error the interface reported (a script error, a blocked request) fails the test too.
+  const uiErrors = log.split('\n').filter(l => l.includes('[renderer]'));
+  if (uiErrors.length) console.error(`The interface reported ${uiErrors.length} error(s):\n${uiErrors.join('\n')}`);
+  process.exit(code === 0 && result.startsWith('ok') && !uiErrors.length ? 0 : 1);
 });
