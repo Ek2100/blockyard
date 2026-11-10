@@ -137,6 +137,12 @@ pub fn adoptium_url(feature: u32, os: &str, arch: &str) -> String {
 
 /// Download Eclipse Temurin (JRE) into the managed folder. Returns the path to java.
 pub async fn install(major: u32, log: Log) -> Result<String> {
+    // Two servers may need the same Java at once: one download, the other waits and reuses it.
+    static INSTALLING: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    let _one_at_a_time = INSTALLING.lock().await;
+    if let Some(j) = list(true).await.into_iter().find(|j| j.managed && j.major == if major == 16 { 17 } else { major }) {
+        return Ok(j.path);
+    }
     let feature = if major == 16 { 17 } else { major }; // Temurin never shipped 16 as LTS; 17 runs 1.17 fine.
     let os = if cfg!(target_os = "macos") { "mac" } else if cfg!(windows) { "windows" } else { "linux" };
     let mut arch = if cfg!(target_arch = "aarch64") { "aarch64" } else { "x64" };

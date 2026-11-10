@@ -31,7 +31,8 @@ pub fn route(url: &str) -> String {
 pub fn client() -> reqwest::Client {
     static C: OnceLock<std::sync::Mutex<Vec<(tokio::runtime::Handle, reqwest::Client)>>> = OnceLock::new();
     let handle = tokio::runtime::Handle::try_current().ok();
-    let build = || reqwest::Client::builder().user_agent(UA).connect_timeout(Duration::from_secs(15)).build().expect("http client");
+    // A stalled connection fails after 60 s of silence instead of hanging an install forever.
+    let build = || reqwest::Client::builder().user_agent(UA).connect_timeout(Duration::from_secs(15)).read_timeout(Duration::from_secs(60)).build().expect("http client");
     let Some(h) = handle else { return build() };
     let mut list = C.get_or_init(Default::default).lock().unwrap();
     if let Some((_, c)) = list.iter().find(|(rh, _)| rh.id() == h.id()) { return c.clone(); }
@@ -47,7 +48,8 @@ fn host_of(url: &str) -> String { url::Url::parse(url).ok().and_then(|u| u.host_
 pub async fn request(url: &str, accept_json: bool) -> Result<reqwest::Response> {
     let real = route(url);
     let mut rb = client().get(&real);
-    if accept_json { rb = rb.header("Accept", "application/json"); }
+    // API calls get an overall limit; file downloads only the read timeout (they can be big).
+    if accept_json { rb = rb.header("Accept", "application/json").timeout(Duration::from_secs(30)); }
     let res = rb.send().await.map_err(|e| {
         anyhow::anyhow!("Couldn't reach {}. Check your internet connection. ({})", host_of(url), short_err(&e))
     })?;

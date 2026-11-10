@@ -144,3 +144,26 @@ async fn eula_and_java_prompts_files_worlds_logs() {
     assert!(dir.exists());
     assert_eq!(call(&c, "servers:list", json!([])).await, json!([]));
 }
+
+#[tokio::test]
+async fn double_start_runs_one_server() {
+    needs_java!();
+    let t = tempfile::tempdir().unwrap();
+    let host = TestHost::new();
+    let c = new_core(host.clone(), &t.path().join("data"), None, None);
+    let dir = t.path().join("S");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::copy(fake("server.jar"), dir.join("server.jar")).unwrap();
+    let port = std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+    std::fs::write(dir.join("server.properties"), format!("server-port={port}\n")).unwrap();
+    std::fs::write(dir.join("eula.txt"), "eula=true\n").unwrap();
+    let s = call(&c, "servers:import", json!([{ "dir": dir, "software": "vanilla", "launchArgs": ["-jar", "server.jar"], "memoryMB": 512 }])).await;
+    let id = s["id"].as_str().unwrap().to_string();
+    call(&c, "servers:update", json!([id, { "javaPath": java().await }])).await;
+    let (a, b) = tokio::join!(c.call("server:start", vec![json!(id)]), c.call("server:start", vec![json!(id)]));
+    assert!(a.is_ok() && b.is_ok(), "{a:?} {b:?}");
+    wait_for("online", 30, || host.events("server:state").iter().any(|e| e["id"] == id && e["state"] == "online")).await;
+    assert_eq!(host.lines(&id).iter().filter(|l| l.starts_with("Starting server with")).count(), 1, "only one process");
+    call(&c, "server:stop", json!([id])).await;
+    wait_for("stopped", 30, || host.events("server:state").iter().rev().find(|e| e["id"] == id).is_some_and(|e| e["state"] == "stopped")).await;
+}

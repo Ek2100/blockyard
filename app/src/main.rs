@@ -460,6 +460,10 @@ fn main() {
                 let core = Core::new(host.clone(), CoreOpts { data_dir, version: app.package_info().version.to_string(), mapper: None, playit: None });
                 app.manage(AppState { core: core.clone(), host: host.clone(), quitting: AtomicBool::new(false) });
                 core.start_background();
+                // Ask once, up front, so join/crash notifications can appear later.
+                if handle.notification().permission_state().map(|p| p != tauri_plugin_notification::PermissionState::Granted).unwrap_or(false) {
+                    let _ = handle.notification().request_permission();
+                }
                 let menu = build_menu(&handle)?;
                 app.set_menu(menu)?;
                 app.on_menu_event(|app, e| on_menu(app, e.id().as_ref()));

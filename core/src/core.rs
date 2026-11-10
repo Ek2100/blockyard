@@ -44,6 +44,7 @@ pub struct Core {
     run_started: Mutex<HashMap<String, i64>>,
     empty_since: Mutex<HashMap<String, i64>>,
     going_to_sleep: Mutex<HashSet<String>>,
+    starting: Mutex<HashSet<String>>,
     sleepers: tokio::sync::Mutex<HashMap<String, WakeListener>>,
 }
 
@@ -77,7 +78,7 @@ impl Core {
             instances: Mutex::default(), upnp: Mutex::default(), bedrock: Mutex::default(), last_diag: Mutex::default(),
             backup_busy: Mutex::default(), crash_log: Mutex::default(), restarting: Mutex::default(), warned: Mutex::default(),
             sched_last: Mutex::default(), prev_state: Mutex::default(), run_started: Mutex::default(), empty_since: Mutex::default(),
-            going_to_sleep: Mutex::default(), sleepers: tokio::sync::Mutex::default(),
+            going_to_sleep: Mutex::default(), starting: Mutex::default(), sleepers: tokio::sync::Mutex::default(),
         });
         let w = core.me.clone();
         core.playit.set_on_change(move |snap| {
@@ -310,6 +311,14 @@ impl Core {
     }
 
     pub async fn start_server(&self, id: &str, auto: bool) -> Result<Value> {
+        // One start at a time per server: a double-click, the tray and a waking player can all ask at once.
+        if !self.starting.lock().unwrap().insert(id.to_string()) { return Ok(json!({ "ok": true, "alreadyStarting": true })); }
+        let r = self.start_server_inner(id, auto).await;
+        self.starting.lock().unwrap().remove(id);
+        r
+    }
+
+    async fn start_server_inner(&self, id: &str, auto: bool) -> Result<Value> {
         let inst = self.instance(id)?;
         let cfg = self.cfg_of(id)?;
         inst.set_cfg(cfg.clone());
