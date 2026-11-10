@@ -4,6 +4,7 @@
 const METHODS = [
   { id: 'upnp', title: 'Automatic port forwarding', badge: 'Fastest', desc: 'Blockyard asks your router to open the port (UPnP / NAT-PMP). Direct connection, lowest ping, no account.' },
   { id: 'playit', title: 'playit.gg tunnel', badge: 'Works anywhere', desc: 'Free tunnel that works on any internet, even 5G, Starlink and CGNAT. Needs a playit account; adds a little ping.' },
+  { id: 'ipv6', title: 'IPv6 (direct)', badge: 'Free, no tunnel', desc: 'Friends connect straight to your IPv6 address. Works on many 5G, Starlink and fibre connections where port forwarding doesn’t. Friends need IPv6 too.' },
   { id: 'manual', title: 'Manual port forwarding', badge: 'DIY', desc: 'Set up the rule in your router yourself. Same speed as automatic, works when UPnP is off.' },
   { id: 'vpn', title: 'Private network', badge: 'Most private', desc: 'Tailscale or ZeroTier. Friends install the same app and join your private network.' },
   { id: 'off', title: 'Home network only', badge: 'Default', desc: 'Only people on your Wi-Fi or LAN can join. Nothing is opened to the internet.' },
@@ -81,6 +82,16 @@ async function renderAccessFull(body, s, opts = {}) {
       h('div', { class: 'muted small', text: 'Routers call this UPnP, NAT-PMP or “automatic port forwarding”. Blockyard closes the port again when the server stops or you quit.' }));
   } else if (v.method === 'playit') {
     detail.append(...renderPlayitSteps(s, v, autoToggle));
+  } else if (v.method === 'ipv6') {
+    const addr = v.ipv6 ? (v.port === 25565 ? `[${v.ipv6}]` : `[${v.ipv6}]:${v.port}`) : null;
+    put(detail,
+      addr
+        ? h('div', { class: 'note' }, `${THIS_PC[0].toUpperCase() + THIS_PC.slice(1)} has a public IPv6 address. Friends join at `, h('strong', { class: 'mono selectable', text: addr }), ' ', copyBtn(addr))
+        : h('div', { class: 'note warn', text: 'This network didn’t give your computer a public IPv6 address, so this option can’t work here. Use automatic port forwarding or playit.gg.' }),
+      h('ul', { class: 'steps' },
+        h('li', null, h('strong', { text: 'Friends need IPv6 too. ' }), 'Most phones on mobile data and many home connections have it. If a friend can’t connect, they may not, so playit.gg is the fallback.'),
+        h('li', null, h('strong', { text: 'Some routers block incoming IPv6. ' }), 'If the internet test fails, look for “IPv6 firewall” in your router settings and allow TCP port ', h('span', { class: 'mono', text: String(v.port) }), ` to ${THIS_PC}.`),
+        h('li', null, h('strong', { text: 'The address can change ' }), 'when your router restarts. Check here and send friends the new one if it does.')));
   } else if (v.method === 'manual') {
     const d = v.diag;
     const gw = d?.gateway;
@@ -132,6 +143,7 @@ async function renderAccessFull(body, s, opts = {}) {
         h('span', { text: 'UPnP' }), yesNo(diag.upnp),
         h('span', { text: 'NAT-PMP' }), yesNo(diag.natpmp),
         diag.tailscale && [h('span', { text: 'Tailscale' }), h('span', { class: 'mono', text: diag.tailscale })],
+        h('span', { text: 'IPv6' }), diag.ipv6 ? h('span', { class: 'mono selectable good', text: diag.ipv6 }) : h('span', { class: 'muted', text: 'No public IPv6 address' }),
         h('span', { text: IS_MAC ? 'macOS Firewall' : IS_WIN ? 'Windows Firewall' : 'Firewall' }), h('span', { text: diag.firewall === 'on' ? (IS_WIN ? 'On (Java must be allowed: see below)' : 'On (click “Allow” if macOS asks about Java)') : diag.firewall === 'off' ? 'Off' : 'Unknown' })),
       h('div', { class: `note ${verdict[0] === 'good' ? '' : verdict[0] === 'bad' ? 'err' : 'warn'}`, text: verdict[1] }),
     ] : h('div', { class: 'muted small', text: 'Finds your router, public IP, whether automatic forwarding is supported, and whether your provider uses CGNAT.' }));

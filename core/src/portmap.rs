@@ -33,6 +33,33 @@ pub fn lan_addresses() -> Vec<Value> {
     out.into_iter().map(|x| x.1).collect()
 }
 
+/// Global (public) IPv6 addresses of this computer: 2000::/3, not link-local or private (fc00::/7).
+pub fn public_ipv6_addresses() -> Vec<String> {
+    let mut out = vec![];
+    for i in netdev::get_interfaces() {
+        for n in &i.ipv6 {
+            let a = n.addr();
+            if (a.segments()[0] & 0xe000) == 0x2000 && !out.contains(&a.to_string()) { out.push(a.to_string()); }
+        }
+    }
+    out
+}
+
+/// "[2001:db8::1]:25570" (port left out when it's the default).
+pub fn ipv6_address(ip: &str, port: u16) -> String { if port == 25565 { format!("[{ip}]") } else { format!("[{ip}]:{port}") } }
+
+/// Split "host:port", "[v6]:port", "[v6]" or "host" into (host, port).
+pub fn split_host_port(s: &str) -> (String, u16) {
+    if let Some(rest) = s.strip_prefix('[') {
+        let (h, tail) = rest.split_once(']').unwrap_or((rest, ""));
+        return (h.to_string(), tail.strip_prefix(':').and_then(|p| p.parse().ok()).unwrap_or(25565));
+    }
+    match s.rsplit_once(':') {
+        Some((h, p)) if !h.contains(':') => (h.to_string(), p.parse().unwrap_or(25565)),
+        _ => (s.to_string(), 25565),
+    }
+}
+
 /// Tailscale hands out 100.64/10 addresses.
 pub fn tailscale_address() -> Option<String> {
     lan_addresses().into_iter().filter_map(|a| a["address"].as_str().map(String::from)).find(|a| is_cgnat(a))
@@ -359,6 +386,7 @@ impl Mapper {
         json!({
             "gateway": gw.map(|g| g.to_string()), "lanIp": lan, "publicIP": public, "routerIP": router_ip,
             "natpmp": pmp_ip.is_some(), "upnp": svc.is_some(), "nat": nat, "tailscale": tailscale_address(), "firewall": fw,
+            "ipv6": public_ipv6_addresses().first(),
             "os": std::env::consts::OS,
         })
     }
@@ -390,7 +418,7 @@ pub async fn allow_through_windows_firewall(java: &str) -> Result<()> {
 
 /// Ask a public service to connect to the server from the internet.
 pub async fn test_reachable(host: &str, port: u16) -> Result<Value> {
-    let target = if port != 25565 { format!("{host}:{port}") } else { host.to_string() };
+    let target = if host.contains(':') { ipv6_address(host, port) } else if port != 25565 { format!("{host}:{port}") } else { host.to_string() };
     let enc: String = url::form_urlencoded::byte_serialize(target.as_bytes()).collect();
     match net::get_json::<Value>(&format!("https://api.mcsrvstat.us/3/{enc}")).await {
         Ok(r) => Ok(json!({ "online": r["online"] == true, "via": "mcsrvstat.us", "players": r["players"], "version": r["version"], "target": target })),
@@ -409,5 +437,10 @@ mod tests {
         assert!(is_cgnat("100.72.1.9") && !is_cgnat("101.0.0.1"));
         assert!(is_private("192.168.1.1") && is_private("10.2.3.4") && is_private("172.20.0.1") && !is_private("172.32.0.1") && !is_private("8.8.8.8"));
         assert_eq!(tag("<a:NewExternalIPAddress>1.2.3.4</a:NewExternalIPAddress>", "NewExternalIPAddress").as_deref(), Some("1.2.3.4"));
+        assert_eq!(split_host_port("[2001:db8::1]:25570"), ("2001:db8::1".into(), 25570));
+        assert_eq!(split_host_port("[2001:db8::1]"), ("2001:db8::1".into(), 25565));
+        assert_eq!(split_host_port("1.2.3.4:25570"), ("1.2.3.4".into(), 25570));
+        assert_eq!(split_host_port("play.example.com"), ("play.example.com".into(), 25565));
+        assert_eq!(ipv6_address("2001:db8::1", 25570), "[2001:db8::1]:25570");
     }
 }

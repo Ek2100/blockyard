@@ -30,7 +30,7 @@ Blockyard is a free, lightweight app (written in Rust) that runs the normal Mine
 
 **Turn a singleplayer world into a server.** Blockyard copies the world (your original is never touched), keeps its game mode and difficulty, and moves your inventory and position to your account so you spawn where you left off.
 
-**Let friends join from anywhere, safely.** Choose *Friends anywhere* and Blockyard opens the port on your router (UPnP / NAT-PMP), then checks from the internet that it worked. If your provider blocks incoming connections (Starlink, 4G/5G home internet), it sets up a free [playit.gg](https://playit.gg) tunnel instead. It also turns the whitelist on, keeps you and anyone already playing on it, and explains the risks in plain words.
+**Let friends join from anywhere, safely.** Choose *Friends anywhere* and Blockyard opens the port on your router (UPnP / NAT-PMP), then checks from the internet that it worked. If your provider blocks incoming connections (Starlink, 4G/5G home internet), it sets up a free [playit.gg](https://playit.gg) tunnel instead, or friends can connect straight to your IPv6 address when your connection has one. It also turns the whitelist on, keeps you and anyone already playing on it, and explains the risks in plain words.
 
 **Invite friends.** Type a friend's username: Blockyard looks up their account, adds them to the whitelist and writes the message to send them, address included.
 

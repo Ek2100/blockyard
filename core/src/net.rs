@@ -26,15 +26,20 @@ pub fn route(url: &str) -> String {
     }
 }
 
-pub fn client() -> &'static reqwest::Client {
-    static C: OnceLock<reqwest::Client> = OnceLock::new();
-    C.get_or_init(|| {
-        reqwest::Client::builder()
-            .user_agent(UA)
-            .connect_timeout(Duration::from_secs(15))
-            .build()
-            .expect("http client")
-    })
+/// One HTTP client per async runtime: pooled connections belong to the runtime that opened them, so a
+/// client shared across runtimes fails with "runtime dropped the dispatch task" once the first one ends.
+pub fn client() -> reqwest::Client {
+    static C: OnceLock<std::sync::Mutex<Vec<(tokio::runtime::Handle, reqwest::Client)>>> = OnceLock::new();
+    let handle = tokio::runtime::Handle::try_current().ok();
+    let build = || reqwest::Client::builder().user_agent(UA).connect_timeout(Duration::from_secs(15)).build().expect("http client");
+    let Some(h) = handle else { return build() };
+    let mut list = C.get_or_init(Default::default).lock().unwrap();
+    if let Some((_, c)) = list.iter().find(|(rh, _)| rh.id() == h.id()) { return c.clone(); }
+    let c = build();
+    list.push((h, c.clone()));
+    // The app has one runtime; tests make many. Keep the newest few.
+    if list.len() > 8 { list.remove(0); }
+    c
 }
 
 fn host_of(url: &str) -> String { url::Url::parse(url).ok().and_then(|u| u.host_str().map(String::from)).unwrap_or_else(|| url.to_string()) }

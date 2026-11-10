@@ -28,9 +28,11 @@ pub struct WakeOpts {
 
 impl WakeListener {
     pub async fn start(o: WakeOpts) -> Result<WakeListener> {
+        // IPv4 always; IPv6 too where the computer has it, so IPv6 friends can wake it as well.
         let listener = TcpListener::bind(("0.0.0.0", o.port)).await
             .map_err(|e| anyhow::anyhow!("Couldn't listen on port {} for sleep mode ({e}).", o.port))?;
         let port = listener.local_addr()?.port();
+        let v6 = bind_v6_only(port);
         let (tx, mut rx) = oneshot::channel::<()>();
         let limit = Arc::new(Semaphore::new(8));
         let o = Arc::new(o);
@@ -40,6 +42,15 @@ impl WakeListener {
                 tokio::select! {
                     _ = &mut rx => break,
                     a = listener.accept() => {
+                        let Ok((sock, _)) = a else { continue };
+                        let Ok(permit) = limit.clone().try_acquire_owned() else { continue }; // busy: drop the connection
+                        let (o, woke) = (o.clone(), woke.clone());
+                        tokio::spawn(async move {
+                            let _ = tokio::time::timeout(Duration::from_secs(5), serve(sock, &o, &woke)).await;
+                            drop(permit);
+                        });
+                    }
+                    a = accept_opt(&v6) => {
                         let Ok((sock, _)) = a else { continue };
                         let Ok(permit) = limit.clone().try_acquire_owned() else { continue }; // busy: drop the connection
                         let (o, woke) = (o.clone(), woke.clone());
@@ -65,6 +76,27 @@ impl Drop for WakeListener {
     fn drop(&mut self) {
         if let Some(tx) = self.stop.take() { let _ = tx.send(()); }
     }
+}
+
+/// An IPv6-only listener on the same port (none if the computer has no IPv6).
+fn bind_v6_only(port: u16) -> Option<TcpListener> {
+    let s = tokio::net::TcpSocket::new_v6().ok()?;
+    set_v6_only(&s);
+    s.bind(std::net::SocketAddr::from((std::net::Ipv6Addr::UNSPECIFIED, port))).ok()?;
+    s.listen(16).ok()
+}
+
+#[cfg(unix)]
+fn set_v6_only(s: &tokio::net::TcpSocket) {
+    use std::os::fd::AsRawFd;
+    let on: libc::c_int = 1;
+    unsafe { libc::setsockopt(s.as_raw_fd(), libc::IPPROTO_IPV6, libc::IPV6_V6ONLY, &on as *const _ as *const libc::c_void, std::mem::size_of::<libc::c_int>() as libc::socklen_t); }
+}
+#[cfg(windows)]
+fn set_v6_only(_s: &tokio::net::TcpSocket) {} // IPv6 sockets are IPv6-only by default on Windows
+
+async fn accept_opt(l: &Option<TcpListener>) -> std::io::Result<(TcpStream, std::net::SocketAddr)> {
+    match l { Some(l) => l.accept().await, None => std::future::pending().await }
 }
 
 async fn serve(mut s: TcpStream, o: &WakeOpts, woke: &std::sync::atomic::AtomicBool) -> Result<()> {
@@ -126,6 +158,11 @@ mod tests {
         let st = protocol::status("127.0.0.1", port, Duration::from_secs(3)).await.unwrap();
         assert_eq!(st["description"]["text"], "💤 Sleeping. Join to wake it up");
         assert_eq!(st["version"]["protocol"], 769);
+        // IPv6 friends get the same answer (where this machine has IPv6 at all).
+        if std::net::TcpListener::bind("[::1]:0").is_ok() {
+            let st6 = protocol::status("::1", port, Duration::from_secs(3)).await.unwrap();
+            assert_eq!(st6["description"]["text"], "💤 Sleeping. Join to wake it up");
+        }
         let msg = protocol::login_attempt("127.0.0.1", port, "Griefer", Duration::from_secs(3)).await.unwrap();
         assert!(msg.contains("whitelist"));
         assert!(woken.lock().unwrap().is_empty());

@@ -363,7 +363,7 @@ async function renderAccessSimple(body, s) {
   // Automatic outside test, once per server start, as soon as there's something to test.
   const test = S.testResult.get(s.id);
   const testFresh = test && test.method === v.method && Date.now() - test.at < 30 * 60e3 ? test : null;
-  const testable = online && ((v.method === 'upnp' && v.upnp?.status === 'open') || (v.method === 'playit' && v.tunnel?.address) || v.method === 'manual');
+  const testable = online && ((v.method === 'upnp' && v.upnp?.status === 'open') || (v.method === 'playit' && v.tunnel?.address) || v.method === 'manual' || (v.method === 'ipv6' && v.ipv6));
   const key = `${s.id}:${v.method}:${s.snapshot.startedAt}`;
   if (testable && !testFresh && !S.autoTested.has(key)) {
     S.autoTested.add(key);
@@ -396,8 +396,11 @@ async function renderAccessSimple(body, s) {
       const up = v.upnp || {};
       const stt = up.status === 'open' ? 'done' : up.status === 'error' ? 'fail' : up.status === 'opening' ? 'busy' : 'todo';
       items.push(row(stt, { open: `Router opened port ${v.port} automatically`, error: 'Your router didn’t allow automatic setup', opening: 'Asking your router to open the port…', idle: 'Open the port on your router' }[up.status || 'idle'],
-        up.status === 'error' ? [up.error, h('div', { class: 'row-btns' }, h('button', { class: 'btn sm primary', text: 'Use playit.gg instead (free)', onclick: () => set({ method: 'playit' }) }), h('button', { class: 'btn sm', text: 'Try Again', disabled: !online, onclick: guard(async () => { S.accessView.set(s.id, await call('access:upnpOpen', s.id)); renderMain(); }) }))]
+        up.status === 'error' ? [up.error, h('div', { class: 'row-btns' }, h('button', { class: 'btn sm primary', text: 'Use playit.gg instead (free)', onclick: () => set({ method: 'playit' }) }),
+          v.ipv6 && h('button', { class: 'btn sm', text: 'Use IPv6 instead (free)', title: `This computer has a public IPv6 address`, onclick: () => set({ method: 'ipv6' }) }), h('button', { class: 'btn sm', text: 'Try Again', disabled: !online, onclick: guard(async () => { S.accessView.set(s.id, await call('access:upnpOpen', s.id)); renderMain(); }) }))]
           : up.status === 'idle' && online ? h('button', { class: 'btn sm', text: 'Open Port Now', onclick: guard(async () => { S.accessView.set(s.id, await call('access:upnpOpen', s.id)); renderMain(); }) }) : null));
+    } else if (v.method === 'ipv6') {
+      items.push(row(v.ipv6 ? 'done' : 'fail', v.ipv6 ? 'Using your IPv6 address' : 'No public IPv6 address on this network', v.ipv6 ? 'Friends need IPv6 too. Details under Advanced below.' : 'Switch to automatic port forwarding or playit.gg.'));
     } else if (v.method === 'playit') {
       items.push(row(v.tunnel?.address ? 'done' : 'todo', 'playit.gg tunnel', v.tunnel?.address ? `Tunnel ready: ${v.tunnel.address}` : 'Follow the steps below. It takes about two minutes, once.'));
     } else {

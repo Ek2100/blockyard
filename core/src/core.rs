@@ -58,7 +58,7 @@ fn ok() -> Result<Value> { Ok(Value::Null) }
 fn trash(p: &Path) -> Result<()> { trash::delete(p).map_err(|e| anyhow::anyhow!("Couldn't move it to the Trash ({e}).")) }
 
 /// The kinds of public access that expose the server to the internet.
-pub fn is_public(method: &str) -> bool { matches!(method, "upnp" | "playit" | "manual") }
+pub fn is_public(method: &str) -> bool { matches!(method, "upnp" | "playit" | "manual" | "ipv6") }
 
 impl Core {
     pub fn new(host: Arc<dyn Host>, o: CoreOpts) -> Arc<Core> {
@@ -474,9 +474,11 @@ impl Core {
         if method == "playit" { if let Some(addr) = tunnel.as_ref().and_then(|t| t["address"].as_str()) { public_address = json!(addr); } }
         if method == "manual" { if let Some(ip) = diag.as_ref().and_then(|d| d["publicIP"].as_str()) { public_address = json!(Self::with_port(ip, port)); } }
         if method == "vpn" { if let Some(t) = &ts { public_address = json!(Self::with_port(t, port)); } }
+        let v6 = crate::portmap::public_ipv6_addresses().into_iter().next();
+        if method == "ipv6" { if let Some(ip) = &v6 { public_address = json!(crate::portmap::ipv6_address(ip, port)); } }
         let o = a.as_object_mut().unwrap();
         o.insert("port".into(), json!(port)); o.insert("upnp".into(), up); o.insert("playit".into(), pl); o.insert("tunnel".into(), tunnel.unwrap_or(Value::Null));
-        o.insert("publicAddress".into(), public_address); o.insert("tailscale".into(), json!(ts)); o.insert("diag".into(), diag.unwrap_or(Value::Null));
+        o.insert("publicAddress".into(), public_address); o.insert("tailscale".into(), json!(ts)); o.insert("ipv6".into(), json!(v6)); o.insert("diag".into(), diag.unwrap_or(Value::Null));
         o.insert("safety".into(), self.safety(&cfg)); o.insert("sleeping".into(), json!(self.is_sleeping(id))); o.insert("os".into(), json!(std::env::consts::OS));
         Ok(a)
     }
@@ -1092,7 +1094,7 @@ impl Core {
                         Self::with_port(&ip, port)
                     }
                 };
-                let (host, p) = match target.rsplit_once(':') { Some((h, p)) => (h.to_string(), p.parse().unwrap_or(25565)), None => (target.clone(), 25565) };
+                let (host, p) = crate::portmap::split_host_port(&target);
                 let mut r = crate::portmap::test_reachable(&host, p).await?;
                 r["target"] = json!(target); r["cfgPort"] = json!(port); r["at"] = json!(now_ms());
                 Ok(r)
