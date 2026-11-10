@@ -78,7 +78,7 @@ async function openCreate(opts = {}) {
   const total = info.totalMemMB;
   const defMem = sw => Math.min(sw === 'neoforge' || sw === 'forge' ? 6144 : 4096, Math.max(2048, Math.floor(total / 4 / 512) * 512));
   const st = {
-    step: opts.mode === 'world' ? 'world' : 'start', mode: opts.mode || null,
+    step: opts.mode === 'world' ? 'world' : opts.mode === 'new' ? 'type' : 'start', mode: opts.mode || null,
     world: null, playerChoice: null, player: null, makeOp: true, applySettings: true,
     software: 'paper', version: '', versions: {}, name: uniqueName('My Server'), memory: defMem('paper'),
     audience: 'anywhere', bedrock: false, port: info.suggestedPort, parent: info.defaultParent, eula: false,
@@ -104,12 +104,7 @@ async function openCreate(opts = {}) {
   // ---- step 1: what do you want to do? ----
   function drawStart() {
     setHead('New Server', 'What would you like to do?');
-    const card = (icon, title, desc, onclick) => h('button', { class: 'choice big', onclick }, h('div', { class: 'choice-icon', text: icon }), h('div', null, h('strong', { text: title }), h('div', { class: 'muted', text: desc })));
-    put(body, h('div', { class: 'choice-col' },
-      card('✨', 'Start a fresh world', 'A brand-new world. Pick plugins, mods or pure vanilla.', () => { st.mode = 'new'; go('type'); }),
-      card('🗺', 'Bring over a singleplayer world', 'Copy a world from your Minecraft saves into a server, inventory included. Your original stays untouched.', () => { st.mode = 'world'; go('world'); }),
-      card('📦', 'Install a modpack', 'From Modrinth or a .mrpack file. Mods, settings and the right loader are set up for a server.', () => { m.close(); openModpack(); }),
-      card('📂', 'Use an existing server folder', `You already have a server on ${THIS_PC}. Blockyard detects what it is.`, () => { m.close(); openImport(); })));
+    put(body, startGrid({ fresh: () => { st.mode = 'new'; go('type'); }, world: () => { st.mode = 'world'; go('world'); }, modpack: () => { m.close(); openModpack(); }, folder: () => { m.close(); openImport(); } }));
     put(foot, h('span', { class: 'grow' }), h('button', { class: 'btn', text: 'Cancel', onclick: () => m.close() }));
   }
 

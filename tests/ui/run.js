@@ -104,6 +104,7 @@ async function main() {
 
     console.log('Start a server and see players');
     expect((await page.locator('.srv .name').first().textContent()) === 'Friends SMP', 'seeded server shows in the sidebar');
+    expect(await page.locator('.getting-started .gs-step').count() === 3, 'a new server shows the Getting started checklist');
     await shot('01-offline');
     await page.locator('.actions .btn.primary', { hasText: 'Start' }).click();
     await waitPill('online');
@@ -204,13 +205,53 @@ async function main() {
     expect(fs.readFileSync(path.join(packDir, 'server.properties'), 'utf8').includes('white-list=true'), 'modpack server went public with the whitelist on');
     await shot('13-modpack-server');
 
+    console.log('Use an existing server folder (same look as creating one)');
+    const existing = path.join(tmp, 'servers', 'Old Server');
+    fs.mkdirSync(existing, { recursive: true });
+    fs.writeFileSync(path.join(existing, 'paper-1.21.4-232.jar'), jar);
+    fs.writeFileSync(path.join(existing, 'server.properties'), 'server-port=25620\n');
+    await page.click('#btn-new');
+    await page.waitForSelector('.modal .choice-grid');
+    expect(await page.locator('.modal .choice-grid .choice').count() === 4, 'New Server offers the same four choices as the welcome screen');
+    await post('/test/pick', existing);
+    await page.locator('.choice.big', { hasText: 'Use an existing server' }).click();
+    await page.waitForSelector('.detected');
+    expect((await page.locator('.detected strong').textContent()).includes('Paper'), 'detected Paper, shown in a summary card');
+    await shot('12b-import');
+    await page.locator('.modal button', { hasText: 'Add Server' }).click();
+    await page.waitForFunction(() => [...document.querySelectorAll('.srv .name')].some(e => e.textContent === 'Old Server'));
+    expect(true, 'imported server appears in the sidebar');
+
     console.log('Other tabs render');
+    await page.locator('.srv', { hasText: 'Friends SMP' }).click();
+    await page.locator('.getting-started button', { hasText: 'Hide' }).click();
+    await page.waitForFunction(() => !document.querySelector('.getting-started'));
+    expect(true, 'Getting started can be hidden');
     await page.locator('.srv', { hasText: 'Friends SMP' }).click();
     for (const t of ['Stats', 'Files', 'Plugins', 'Worlds', 'Backups', 'Properties']) { await clickTab(t); await sleep(300); await shot(`14-${t.toLowerCase()}`); }
     await page.click('#btn-settings'); await shot('15-app-settings');
     expect(errors.length === 0, `no errors in the page${errors.length ? ': ' + errors.join(' | ') : ''}`);
     await page.close();
   }
+  // First launch: nothing set up yet.
+  console.log('\nFirst launch');
+  const data2 = path.join(tmp, 'empty');
+  fs.mkdirSync(data2, { recursive: true });
+  const bridge2 = spawn(bridgeBin, ['--ui', path.join(ROOT, 'ui'), '--data', data2, '--port', '0'], { env: { ...process.env, BLOCKYARD_HTTP_OVERRIDE: mockBase }, stdio: ['ignore', 'pipe', 'inherit'] });
+  const base2 = await new Promise(resolve => bridge2.stdout.on('data', d => { const m = String(d).match(/BRIDGE (http\S+)/); if (m) resolve(m[1]); }));
+  for (const scheme of ['light', 'dark']) {
+    const p2 = await browser.newPage({ viewport: { width: 1240, height: 800 }, colorScheme: scheme });
+    await p2.goto(base2 + '/');
+    await p2.waitForSelector('.welcome .choice-grid');
+    if (scheme === 'light') {
+      expect(await p2.locator('.welcome .choice-grid .choice').count() === 4, 'welcome screen shows the four ways to start');
+      expect(await p2.locator('.welcome .how-step').count() === 3, 'welcome screen explains it in three steps');
+    }
+    await sleep(300);
+    await p2.screenshot({ path: path.join(OUT, `${scheme === 'dark' ? 'dark-' : ''}00-welcome.png`) });
+    await p2.close();
+  }
+  bridge2.kill();
   await browser.close();
   await post('/test/shutdown').catch(() => {});
   mock.close();

@@ -535,3 +535,20 @@ a:hover { text-decoration: underline; }
 .mr-item { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .mr-icon.ph { display: grid; place-items: center; font-size: 22px; }
 body.win .side-drag, body.win .welcome-drag { display: none; }
+.choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choice-grid .choice.big { align-items: flex-start; min-height: 86px; }
+.welcome { overflow-y: auto; }
+.welcome-inner.wide { max-width: 680px; padding: 10px 24px 30px; }
+.welcome .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 20px; text-align: left; }
+.how-step { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+.how-n { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 700; font-size: 12px; flex: none; }
+.welcome .choice-grid { text-align: left; }
+.welcome-foot { margin-top: 16px; }
+.card.detail.detected { display: flex; flex-direction: row; align-items: center; gap: 14px; margin-bottom: 14px; text-align: left; }
+.detected .sw-icon { margin: 0; }
+.getting-started { margin: 12px 16px 0; padding: 12px 14px; flex: none; }
+.getting-started .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.gs-step { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.gs-step .check-dot { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; background: var(--hover); flex: none; }
+.gs-step.done .check-dot { background: var(--accent); color: var(--accent-ink); }
+.gs-step.done strong { text-decoration: line-through; color: var(--muted); }

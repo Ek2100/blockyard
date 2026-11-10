@@ -271,6 +271,8 @@ const lineEl = entry => h('div', { class: lineClass(entry), text: entry.text });
 
 function renderConsole(body, s) {
   body.className = 'tab-body flush';
+  const gs = typeof gettingStarted === 'function' && gettingStarted(s);
+  if (gs) body.append(gs);
   const running = !['stopped', 'sleeping'].includes(s.snapshot.state);
   const log = h('div', { class: 'log', id: 'log' });
   const lines = S.logs.get(s.id) || [];

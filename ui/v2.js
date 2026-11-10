@@ -187,3 +187,86 @@ async function openModpack() {
   }
   pick();
 }
+
+// ================= Getting started: one set of choices, the welcome screen, import, first steps =================
+/** The four ways to get a server, as matching cards. `on` maps each id to what happens when it's chosen. */
+function startGrid(on) {
+  const opts = [
+    { id: 'fresh', icon: '✨', title: 'Start a fresh world', desc: 'A brand-new world with plugins, mods or pure vanilla.' },
+    { id: 'world', icon: '🗺', title: 'Bring a singleplayer world', desc: 'Copy one of your saves into a server, inventory included. The original stays untouched.' },
+    { id: 'modpack', icon: '📦', title: 'Install a modpack', desc: 'From Modrinth or a .mrpack file, with the right mod loader set up for you.' },
+    { id: 'folder', icon: '📂', title: 'Use an existing server', desc: `A server folder already on ${THIS_PC}. Blockyard works out what it is.` },
+  ];
+  return h('div', { class: 'choice-grid' }, opts.map(o => h('button', { class: 'choice big', 'data-start': o.id, onclick: () => on[o.id]() },
+    h('div', { class: 'choice-icon', text: o.icon }), h('div', null, h('strong', { text: o.title }), h('div', { class: 'muted small', text: o.desc })))));
+}
+
+/** First launch (no servers yet): what Blockyard does, how it works, and the four ways to start. */
+function renderWelcome(main) {
+  main.append(h('div', { class: 'welcome-drag' }), h('div', { class: 'welcome' }, h('div', { class: 'welcome-inner wide' },
+    h('div', { class: 'cube' }),
+    h('h1', { text: 'Welcome to Blockyard' }),
+    h('p', { text: 'Host a Minecraft server for your friends, without the terminal. Blockyard downloads the server and the right Java, and keeps everything in one window.' }),
+    h('div', { class: 'how' },
+      [['1', 'Create', 'Pick a fresh world, a singleplayer world or a modpack.'], ['2', 'Start', 'One click. Join from Minecraft on this computer straight away.'], ['3', 'Invite', 'Open it to friends anywhere, safely: only people you invite can join.']]
+        .map(([n, t, d]) => h('div', { class: 'how-step' }, h('span', { class: 'how-n', text: n }), h('div', null, h('strong', { text: t }), h('div', { class: 'muted small', text: d }))))),
+    startGrid({ fresh: () => openCreate({ mode: 'new' }), world: () => openCreate({ mode: 'world' }), modpack: openModpack, folder: openImport }),
+    h('div', { class: 'muted small welcome-foot', text: 'Free and open source. Your servers are normal Minecraft folders you can move anywhere.' }))));
+}
+
+/** Use an existing server folder: same look as creating one. */
+async function openImport() {
+  const dir = await call('dialog:pickFolder', { title: 'Choose an existing server folder', buttonLabel: 'Choose' });
+  if (!dir) return;
+  let d;
+  try { d = await call('servers:detect', dir); } catch (e) { return toast(e.message, 'error'); }
+  const total = S.info.totalMemMB;
+  const st = { name: d.name, software: d.software, mc: d.mcVersion || '', launch: (d.launchArgs || []).join(' '), memory: 2048 };
+  const body = h('div', { class: 'wizard' });
+  const foot = h('div', { class: 'modal-foot-inner' });
+  const m = modal({ title: 'Use an existing server', subtitle: dir, size: 'wide', body, foot });
+  const memLabel = h('strong', { text: fmtMem(st.memory) });
+  const field = (label, input, help) => h('div', { class: 'field' }, h('label', { text: label }), input, help && h('div', { class: 'help', text: help }));
+  const sw = h('select', { style: { width: '100%' }, onchange: e => { st.software = e.target.value; } }, S.software.map(x => h('option', { value: x.id, text: x.label, selected: x.id === d.software })));
+  const launch = h('input', { type: 'text', class: 'mono', value: st.launch, placeholder: '-jar server.jar', style: { width: '100%' }, oninput: e => { st.launch = e.target.value; } });
+  put(body,
+    h('div', { class: 'card detail detected' }, swIcon(d.software, true),
+      h('div', { class: 'grow' }, h('strong', { text: `Looks like a ${swInfo(d.software).label} server` }),
+        h('div', { class: 'muted small', text: [d.mcVersion ? `Minecraft ${d.mcVersion}` : 'Minecraft version not detected', `port ${d.port}`, d.launchArgs ? `starts with ${d.launchArgs.join(' ')}` : null].filter(Boolean).join(' · ') }))),
+    ...d.warnings.map(w => h('div', { class: 'note warn', text: w })),
+    field('Name', h('input', { type: 'text', value: st.name, style: { width: '100%' }, oninput: e => { st.name = e.target.value; } })),
+    h('div', { class: 'field-row' },
+      field('Software', sw),
+      field('Minecraft version', h('input', { type: 'text', value: st.mc, placeholder: 'e.g. 1.21.4', style: { width: '100%' }, oninput: e => { st.mc = e.target.value.trim(); } }), !d.mcVersion && 'Couldn’t detect it. Enter it so the right Java is used.')),
+    d.jars.length > 1 && field('Server jar', h('select', { style: { width: '100%' }, onchange: e => { launch.value = st.launch = `-jar ${e.target.value}`; } }, d.jars.map(j => h('option', { value: j, text: j, selected: d.launchArgs?.[1] === j })))),
+    h('details', { class: 'more-sw' }, h('summary', { text: 'Advanced: launch arguments' }), field('Launch arguments', launch, 'What runs after "java". Memory flags and nogui are added for you.')),
+    field(null, h('input', { type: 'range', min: 1024, max: Math.max(2048, Math.floor((total * 0.75) / 512) * 512), step: 512, value: st.memory, oninput: e => { st.memory = +e.target.value; memLabel.textContent = fmtMem(st.memory); } })));
+  body.lastChild.prepend(h('label', null, 'Memory: ', memLabel));
+  put(foot,
+    h('button', { class: 'btn', text: 'Back', onclick: () => { m.close(); openCreate(); } }), h('span', { class: 'grow' }),
+    h('button', { class: 'btn primary', text: 'Add Server', onclick: guard(async () => {
+      const launchArgs = st.launch.match(/"[^"]*"|\S+/g)?.map(t => t.replace(/^"|"$/g, ''));
+      const created = await call('servers:import', { dir, name: st.name.trim(), software: st.software, mcVersion: st.mc, launchArgs, memoryMB: st.memory });
+      S.servers.push(created); m.close(); S.tab = 'console'; select(created.id); toast(`Added ${created.name}`);
+    }) }));
+}
+
+/** Shown on the Console of a server until it's been started, joined and shared (or dismissed). */
+function gettingStarted(s) {
+  if (s.onboarded) return null;
+  const st = s.snapshot.state;
+  const view = S.accessView.get(s.id);
+  const started = st === 'online' || (S.logs.get(s.id) || []).some(l => /Done \(/.test(l.text || ''));
+  const shared = view && view.method && view.method !== 'off';
+  const port = portOf(s.id);
+  const local = port === '25565' ? 'localhost' : `localhost:${port}`;
+  const step = (done, title, desc, action) => h('div', { class: `gs-step${done ? ' done' : ''}` }, h('span', { class: 'check-dot', text: done ? '✓' : '•' }),
+    h('div', { class: 'grow' }, h('strong', { text: title }), h('div', { class: 'muted small' }, desc)), action);
+  const dismiss = guard(async () => { const u = await call('servers:update', s.id, { onboarded: true }); Object.assign(s, u, { snapshot: s.snapshot }); renderMain(); });
+  return h('div', { class: 'card getting-started' },
+    h('div', { class: 'section-head' }, h('strong', { text: 'Getting started' }), h('button', { class: 'btn sm ghost', text: 'Hide', onclick: dismiss })),
+    step(started, 'Start the server', 'The first start creates the world. It takes a minute.'),
+    step(false, 'Join it yourself', ['In Minecraft: Multiplayer → Add Server → ', h('span', { class: 'mono selectable', text: local }), '.']),
+    step(shared, 'Play with friends', 'Open it to friends anywhere and invite them. Only people you invite can join.',
+      h('button', { class: 'btn sm', text: shared ? 'Invite' : 'Set Up', onclick: () => { if (shared) inviteDialog(s); else { S.tab = 'access'; renderMain(); } } })));
+}
